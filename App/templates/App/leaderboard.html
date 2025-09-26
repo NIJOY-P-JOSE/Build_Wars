@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build Wars - Live Rankings</title>
+
+    <!-- Bootstrap CSS (local file for offline use) -->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+
+    <style>
+        /* --- THEME & FONT SETUP --- */
+        :root {
+            --background-color: #0d1117;
+            --card-color: #161b22;
+            --border-color: rgba(0, 191, 255, 0.2);
+            --text-color: #c9d1d9;
+            --primary-glow-color: #00bfff; /* Deep Sky Blue */
+            --accent-color: #238636;
+            /* Badge Colors */
+            --gold: #FFD700;
+            --silver: #C0C0C0;
+            --bronze: #CD7F32;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.1) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+
+        /* --- HEADER STYLING --- */
+        .main-header h1 {
+            font-family: 'Orbitron', 'Segoe UI', Impact, sans-serif;
+            font-weight: 700;
+            font-size: 3.5rem;
+            color: white;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--primary-glow-color), 0 0 20px var(--primary-glow-color);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        /* --- RANK LIST CENTERING --- */
+        #rank-list {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* --- PARTICIPANT CARD STYLING --- */
+        .participant-card {
+            display: flex;
+            align-items: center;
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid transparent;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .participant-card:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            border-color: var(--primary-glow-color);
+        }
+        
+        /* --- NEW HIGHLIGHT ANIMATION ---
+        This is the new style for the temporary highlight.
+        */
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.3);
+                border-color: var(--gold);
+            }
+            to {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.5);
+                border-color: var(--gold);
+            }
+        }
+
+        .new-topper-highlight {
+            animation: glow 0.8s infinite alternate;
+        }
+        /* --- END OF NEW STYLES --- */
+
+
+        .rank-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-glow-color);
+            margin-right: 1.5rem;
+        }
+
+        .participant-details { flex-grow: 1; }
+        .participant-name { font-size: 1.2rem; font-weight: 700; color: white; }
+        .participant-location { font-size: 0.9rem; opacity: 0.7; }
+        .participant-score { font-size: 1.5rem; font-weight: 700; font-family: 'Orbitron', sans-serif; margin-right: 1.5rem; }
+
+        .participant-card.rank-1 { border-left-color: var(--gold); }
+        .participant-card.rank-2 { border-left-color: var(--silver); }
+        .participant-card.rank-3 { border-left-color: var(--bronze); }
+        
+        .rank-badge { position: absolute; top: 0; right: 15px; font-size: 1.5rem; line-height: 1; opacity: 0.5; }
+        .rank-1 .rank-badge { color: var(--gold); }
+        .rank-2 .rank-badge { color: var(--silver); }
+        .rank-3 .rank-badge { color: var(--bronze); }
+
+        .edit-button { display: inline-flex; align-items: center; background-color: rgba(255, 255, 255, 0.1); color: var(--text-color); text-decoration: none; padding: 0.5rem 1rem; border-radius: 5px; font-weight: 500; transition: background-color 0.3s ease, color 0.3s ease; }
+        .edit-button:hover { background-color: var(--accent-color); color: white; }
+        .edit-button svg { margin-right: 0.5rem; }
+        
+        .add-participant-button { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: var(--primary-glow-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0, 191, 255, 0.4); transition: all 0.3s ease; z-index: 1000; }
+        .add-participant-button:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0, 191, 255, 0.6); }
+
+        #celebration-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <canvas id="celebration-canvas"></canvas>
+    <audio id="celebration-audio" src="{% static 'audio/celebration.mp3' %}" preload="auto"></audio>
+
+    <div class="container py-4">
+        <header class="main-header text-center mb-4">
+            <h1>BUILD WARS</h1>
+            <p class="subtitle">Live Leaderboard &bull; VAST, Thrissur &bull; 26 Sep 2025</p>
+        </header>
+
+        <main id="rank-list">
+            {% if participants %}
+                {% for participant in participants %}
+                    <!-- 
+                        --- NEW ID ATTRIBUTE ---
+                        We've added a unique ID to each card so JavaScript can find it.
+                    -->
+                    <div id="participant-card-{{ participant.id }}" class="participant-card 
+                        {% if forloop.counter == 1 %}rank-1{% endif %}
+                        {% if forloop.counter == 2 %}rank-2{% endif %}
+                        {% if forloop.counter == 3 %}rank-3{% endif %}
+                    ">
+                        
+                        {% if forloop.counter <= 3 %}
+                        <div class="rank-badge">
+                            {% if forloop.counter == 1 %}👑{% endif %}
+                            {% if forloop.counter == 2 %}⭐{% endif %}
+                            {% if forloop.counter == 3 %}🥉{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="rank-number">#{{ forloop.counter }}</div>
+                        <div class="participant-details">
+                            <div class="participant-name">{{ participant.name }}</div>
+                            <div class="participant-location">{{ participant.location }}</div>
+                        </div>
+                        <div class="participant-score">
+                            {% if participant.score is not None %}{{ participant.score }} pts{% else %}PENDING{% endif %}
+                        </div>
+                        <a href="{% url 'edit-participant' participant.id %}" class="edit-button">
+                            <svg xmlns="http://www.w.g/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+                            Edit
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center p-5 text-muted">
+                    <h3>No Participants Yet</h3>
+                    <p>Click the '+' button below to register the first competitor!</p>
+                </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <a href="{% url 'add-participant' %}" class="add-participant-button" aria-label="Add new participant">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/></svg>
+    </a>
+    
+    <script src="{% static 'js/confetti.browser.min.js' %}"></script>
+    <script src="{% static 'js/ranking_update.js' %}"></script>
+</body>
+</html>
+
